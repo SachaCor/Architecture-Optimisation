@@ -98,6 +98,7 @@ def accuracy(output, target, topk=(1,)):
         correct_k = correct[:k].flatten().float().sum(0)
         res.append(correct_k.mul_(100.0 / batch_size))
     return res
+print('prout')
 
 def Average(lst):
    return sum(lst)/len(lst)
