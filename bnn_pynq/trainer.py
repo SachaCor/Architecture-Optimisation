@@ -104,7 +104,13 @@ def Average(lst):
 
 class Trainer(object):
     def __init__(self, args):
-
+        
+        #Set the seed for the randomness
+        np.random.seed(args.random_seed)
+        random.seed(args.random_seed)
+        torch.manual_seed(args.random_seed)
+        torch.cuda.manual_seed_all(args.random_seed)
+        
         model, cfg = model_with_cfg(args.network, args.pretrained)
 
         # Init arguments
@@ -131,15 +137,9 @@ class Trainer(object):
             	os.mkdir(self.checkpoints_dir_path)
         self.logger = Logger(self.output_dir_path, args.dry_run)
 
-        # Randomness
-        random.seed(args.random_seed)
-        torch.manual_seed(args.random_seed)
-        torch.cuda.manual_seed_all(args.random_seed)
-
         # Datasets
-        NoiseRate=0.1		#Choose the percentage of noise into the training set
+        NoiseRate=self.args.noiseT		#Choose the percentage of noise into the training set
         NoiseRateT=self.args.noiseT		#Choose the percentage of noise into the testing set
-        transform_to_tensor = transforms.Compose([transforms.ToTensor()])
 
         dataset = cfg.get('MODEL', 'DATASET')
         self.num_classes = cfg.getint('MODEL', 'NUM_CLASSES')
