@@ -61,7 +61,6 @@ class AddRandomNoise(object):		#function to add gaussian noise
         self.fraction = fraction
 
     def __call__(self,nparray):
-        np.random.seed()
         flip_mask = np.random.rand(28,28) < self.fraction
         flip_mask = torch.from_numpy(flip_mask)
         noisy_data=(1 - (flip_mask*1)) * nparray + flip_mask * (1 - nparray)
@@ -110,7 +109,6 @@ class Trainer(object):
 
         # Init arguments
         self.args = args
-        np.random.seed()
         prec_name = "_{}W{}A".format(cfg.getint('QUANT', 'WEIGHT_BIT_WIDTH'),
                                      cfg.getint('QUANT', 'ACT_BIT_WIDTH'))
         experiment_name = '{}{}_{}'.format(args.network, prec_name,
@@ -156,8 +154,8 @@ class Trainer(object):
         train_image_paths = [] #to store image paths in list
         classes = [] #to store class values
    #Choose the path for training and testing datasets
-        path_train = ["images/train/0","images/train/1","images/train/2","images/train/3","images/train/4","images/train/5","images/train/6","images/train/7","images/train/8","images/train/9"] 
-        path_test = ["images/test/0","images/test/1","images/test/2","images/test/3","images/test/4","images/test/5","images/test/6","images/test/7","images/test/8","images/test/9"] 
+        path_train = [train_data_path+"0",train_data_path+"1",train_data_path+"2",train_data_path+"3",train_data_path+"4",train_data_path+"5",train_data_path+"6",train_data_path+"7",train_data_path+"8",train_data_path+"9"] 
+        path_test = [test_data_path+"0",test_data_path+"1",test_data_path+"2",test_data_path+"3",test_data_path+"4",test_data_path+"5",test_data_path+"6",test_data_path+"7",test_data_path+"8",test_data_path+"9"] 
     #1.
    # get all the paths from train_data_path and append image paths and class to to respective     lists    # eg. train path-> 'images/train/26.Pont_du_Gard/4321ee6695c23c7b.jpg'
    # eg. class -> 26.Pont_du_Gard
@@ -508,7 +506,7 @@ class Trainer(object):
              f.close
 
 
-         with open(table_path, 'w') as f:	#File for the output vectors (guesses)
+         with open(table_path, 'w') as f:	#File for the output vectors (predictions)
            for line in B:
              f.write(line)
              f.write('\n')

@@ -26,10 +26,19 @@ import sys
 
 import torch
 from trainer import Trainer
+import numpy as np
+import random
+
 
 # Pytorch precision
 torch.set_printoptions(precision=10)
 
+#Choose the seed
+seed = 1
+np.random.seed(seed)
+random.seed(seed)
+torch.manual_seed(seed)
+torch.cuda.manual_seed_all(seed)
 
 # Util method to add mutually exclusive boolean
 def add_bool_arg(parser, name, default):
