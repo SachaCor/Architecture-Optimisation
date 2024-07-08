@@ -23,14 +23,13 @@
 import argparse
 import os
 import sys
-
 import torch
 from trainer import Trainer
 
-# Pytorch precision
+#Pytorch precision
 torch.set_printoptions(precision=10)
 
-# Util method to add mutually exclusive boolean
+#Util method to add mutually exclusive boolean
 def add_bool_arg(parser, name, default):
     group = parser.add_mutually_exclusive_group(required=False)
     group.add_argument("--" + name, dest=name, action="store_true")
@@ -38,7 +37,7 @@ def add_bool_arg(parser, name, default):
     parser.set_defaults(**{name: default})
 
 
-# Util method to pass None as a string and be recognized as None value
+#Util method to pass None as a string and be recognized as None value
 def none_or_str(value):
     if value == "None":
         return None
@@ -53,20 +52,20 @@ def none_or_int(value):
 
 def parse_args(args):
     parser = argparse.ArgumentParser(description="PyTorch MNIST/CIFAR10 Training")
-    # I/O
+    #I/O
     parser.add_argument("--datadir", default="./data/", help="Dataset location")
     parser.add_argument("--experiments", default="./experiments", help="Path to experiments folder")
     parser.add_argument("--dry_run", action="store_true", help="Disable output files generation")
     parser.add_argument("--log_freq", type=int, default=10)
-    # Execution modes
+    #Execution modes
     parser.add_argument("--evaluate", dest="evaluate", action="store_true", help="evaluate model on validation set")
     parser.add_argument("--resume", dest="resume", type=none_or_str,
                         help="Resume from checkpoint. Overrides --pretrained flag.")
     add_bool_arg(parser, "detect_nan", default=False)
-    # Compute resources
+    #Compute resources
     parser.add_argument("--num_workers", default=4, type=int, help="Number of workers")
     parser.add_argument("--gpus", type=none_or_str, default="0", help="Comma separated GPUs")
-    # Optimizer hyperparams
+    #Optimizer hyperparams
     parser.add_argument("--batch_size", default=100, type=int, help="batch size")
     parser.add_argument("--lr", default=0.02, type=float, help="Learning rate")
     parser.add_argument("--optim", type=none_or_str, default="ADAM", help="Optimizer to use")
@@ -79,10 +78,11 @@ def parse_args(args):
     parser.add_argument("--epochs", default=1000, type=int, help="Number of epochs")
     parser.add_argument("--random_seed", default=1, type=int, help="Random seed")
     parser.add_argument("--noiseT", default=0.1, type=float, help="noise in testing set")
-    # Neural network Architecture
+    #Neural network Architecture
     parser.add_argument("--network", default="LFC_1W1A", type=str, help="neural network")
     parser.add_argument("--pretrained", action='store_true', help="Load pretrained model")
     parser.add_argument("--strict", action='store_true', help="Strict state dictionary loading")
+    parser.add_argument("--dataset", default="MNIST", help="Pick the dataset: MNIST,MNIST_OddEven or Fashion")
     return parser.parse_args(args)
 
 
@@ -114,17 +114,17 @@ def launch(cmd_args):
             abs_path = os.path.abspath(os.path.join(os.getcwd(), path))
             setattr(args, path_arg, abs_path)
 
-    # Access config as an object
+    #Access config as an object
     args = objdict(args.__dict__)
 
-    # Avoid creating new folders etc.
+    #Avoid creating new folders etc.
     if args.evaluate:
         args.dry_run = True
 
-    # Init trainer
+    #Init trainer
     trainer = Trainer(args)
 
-    # Execute
+    #Execute
     if args.evaluate:
         with torch.no_grad():
             trainer.eval_model()

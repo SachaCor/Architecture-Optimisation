@@ -24,13 +24,11 @@ import random
 import os
 import time
 from datetime import datetime
-import matplotlib.pyplot as plt
 import cv2
 import glob
 import numpy as np
 import torch
 import torch.optim as optim
-import brevitas.onnx as bo
 from torch import nn
 from torch.optim.lr_scheduler import MultiStepLR
 from torch.utils.data import DataLoader
@@ -44,18 +42,8 @@ from models.losses import SqrHingeLoss
 
 torch.set_printoptions(profile="full")
 
-class AddGaussianNoise(object):		#function to add gaussian noise
-    def __init__(self, mean=0., std=1.):
-        self.std = std
-        self.mean = mean
-        
-    def __call__(self, tensor):
-        return tensor + torch.randn(tensor.size()) * self.std + self.mean
-    
-    def __repr__(self):
-        return self.__class__.__name__ + '(mean={0}, std={1})'.format(self.mean, self.std)
-
-class AddRandomNoise(object):		#function to add gaussian noise
+#Function to add random noise in the images
+class AddRandomNoise(object):		
     
     def __init__(self,fraction):
         self.fraction = fraction
@@ -79,7 +67,7 @@ class MirrorMNIST(MNIST):
          "ec29112dd5afa0611ce80d1b7f02629c")
     ]
 
-    # required by torchvision <= 0.4.2
+    #Required by torchvision <= 0.4.2
     urls = [l for l, h in resources]
 
 
@@ -113,17 +101,13 @@ class Trainer(object):
         
         model, cfg = model_with_cfg(args.network, args.pretrained)
 
-        # Init arguments
+        #Init arguments
         self.args = args
         prec_name = "_{}W{}A".format(cfg.getint('QUANT', 'WEIGHT_BIT_WIDTH'),
                                      cfg.getint('QUANT', 'ACT_BIT_WIDTH'))
         experiment_name = '{}{}_{}'.format(args.network, prec_name,
                                            datetime.now().strftime('%Y%m%d_%H%M%S'))
         self.output_dir_path = os.path.join(args.experiments, experiment_name)
-
-        #if self.args.resume:
-        #    self.output_dir_path, _ = os.path.split(args.resume)
-        #    self.output_dir_path, _ = os.path.split(self.output_dir_path)
         
         if self.args.evaluate:
             self.output_dir_path, _ = os.path.split(args.resume)
@@ -131,38 +115,39 @@ class Trainer(object):
 
         if not args.dry_run:
             self.checkpoints_dir_path = os.path.join(self.output_dir_path, 'checkpoints')
-            #if not args.resume:
             if not args.evaluate:
             	os.mkdir(self.output_dir_path)
             	os.mkdir(self.checkpoints_dir_path)
         self.logger = Logger(self.output_dir_path, args.dry_run)
 
         # Datasets
-        NoiseRate=self.args.noiseT		#Choose the percentage of noise into the training set
         NoiseRateT=self.args.noiseT		#Choose the percentage of noise into the testing set
 
         dataset = cfg.get('MODEL', 'DATASET')
         self.num_classes = cfg.getint('MODEL', 'NUM_CLASSES')
-        transform_train = transforms.Compose([transforms.ToTensor(),AddRandomNoise(NoiseRate)])
+        transform_train = transforms.Compose([transforms.ToTensor(),AddRandomNoise(NoiseRateT)])
         transform_test = transforms.Compose([transforms.ToTensor(),AddRandomNoise(NoiseRateT)])
 
    ####################################################
-   #       Create Train, Valid and Test sets
-        train_data_path = 'images/train'
-        test_data_path = 'images/test'
+        dataset=self.args.dataset
+        #Create Train, Valid and Test sets
+        train_data_path = 'images/'+dataset+'/train'
+        test_data_path = 'images/'+dataset+'/test'
 
         train_image_paths = [] #to store image paths in list
         classes = [] #to store class values
-   #Choose the path for training and testing datasets
-        path_train = [train_data_path+"0",train_data_path+"1",train_data_path+"2",train_data_path+"3",train_data_path+"4",train_data_path+"5",train_data_path+"6",train_data_path+"7",train_data_path+"8",train_data_path+"9"] 
-        path_test = [test_data_path+"0",test_data_path+"1",test_data_path+"2",test_data_path+"3",test_data_path+"4",test_data_path+"5",test_data_path+"6",test_data_path+"7",test_data_path+"8",test_data_path+"9"] 
-    #1.
-   # get all the paths from train_data_path and append image paths and class to to respective     lists    # eg. train path-> 'images/train/26.Pont_du_Gard/4321ee6695c23c7b.jpg'
-   # eg. class -> 26.Pont_du_Gard
+        #Choose the path for training and testing datasets
+        path_train = []
+        path_test = []
+        for class_name in sorted(os.listdir(train_data_path)):
+            path_train.append([train_data_path+'/'+class_name])
+            path_test.append([test_data_path+'/'+class_name])
+            # get all the paths from train_data_path and append image paths and class to respective lists    
+            # eg. train path-> 'images/train/26.Pont_du_Gard/4321ee6695c23c7b.jpg'
         for data_path in path_train: 
-            print('train_image_path example: ',data_path )            
-            classes.append(data_path.split('/')[-1]) 
-            train_image_paths.append(glob.glob(data_path + '/*'))
+            print('train_image_path example: ',data_path[0] )            
+            classes.append(data_path[0].split('/')[-1]) 
+            train_image_paths.append(glob.glob(data_path[0] + '/*'))
 
        
         train_image_paths = list(np.concatenate(train_image_paths).flat)
@@ -172,14 +157,14 @@ class Trainer(object):
  
         test_image_paths = []
         for data_path in path_test:
-            test_image_paths.append(glob.glob(data_path + '/*'))
+            test_image_paths.append(glob.glob(data_path[0] + '/*'))
 
         test_image_paths = list(np.concatenate(test_image_paths).flat)
         self.test = test_image_paths
 
 
 
-   #######################################################
+  #######################################################
   #      Create dictionary for class indexes
   #######################################################
 
@@ -220,11 +205,11 @@ class Trainer(object):
                                       shuffle=False,
                                       num_workers=args.num_workers)
 
-        # Init starting values
+        #Init starting values
         self.starting_epoch = 1
         self.best_val_acc = 0
 
-        # Setup device
+        #Setup device
         if args.gpus is not None:
             args.gpus = [int(i) for i in args.gpus.split(',')]
             self.device = 'cuda:' + str(args.gpus[0])
@@ -233,7 +218,7 @@ class Trainer(object):
             self.device = 'cpu'
         self.device = torch.device(self.device)
 
-        # Resume checkpoint, if any
+        #Resume checkpoint, if any
         if args.resume:
             print('Loading model checkpoint at: {}'.format(args.resume))
             package = torch.load(args.resume, map_location='cpu')
@@ -246,14 +231,14 @@ class Trainer(object):
             model = nn.DataParallel(model, args.gpus)
         self.model = model
 
-        # Loss function
+        #Loss function
         if args.loss == 'SqrHinge':
             self.criterion = SqrHingeLoss()
         else:
             self.criterion = nn.CrossEntropyLoss()
         self.criterion = self.criterion.to(device=self.device)
 
-        # Init optimizer
+        #Init optimizer
         if args.optim == 'ADAM':
             self.optimizer = optim.Adam(self.model.parameters(),
                                         lr=args.lr,
@@ -264,7 +249,7 @@ class Trainer(object):
                                        momentum=self.args.momentum,
                                        weight_decay=self.args.weight_decay)
 
-        # Resume optimizer, if any
+        #Resume optimizer, if any
         if args.resume and not args.evaluate:
             self.logger.log.info("Loading optimizer checkpoint")
             if 'optim_dict' in package.keys():
@@ -274,7 +259,7 @@ class Trainer(object):
             if 'best_val_acc' in package.keys():
                 self.best_val_acc = package['best_val_acc']
 
-        # LR scheduler
+        #LR scheduler
         if args.scheduler == 'STEP':					#Smart evoluting Learning Rate
             milestones = [int(i) for i in args.milestones.split(',')]
             self.scheduler = MultiStepLR(optimizer=self.optimizer,
@@ -285,7 +270,7 @@ class Trainer(object):
         else:
             raise Exception("Unrecognized scheduler {}".format(self.args.scheduler))
 
-        # Resume scheduler, if any
+        #Resume scheduler, if any
         if args.resume and not args.evaluate and self.scheduler is not None:
             self.scheduler.last_epoch = package['epoch'] - 1
 
@@ -301,19 +286,19 @@ class Trainer(object):
 
     def train_model(self):
         
-        # training starts
+        #Training starts
         if self.args.detect_nan:
             torch.autograd.set_detect_anomaly(True)
         loss_path = os.path.join(self.output_dir_path, "loss_train.txt")
 
         for epoch in range(self.starting_epoch, self.args.epochs):
 
-            # Set to training mode
+            #Set to training mode
             self.model.train()
             self.criterion.train()
             loss_train=[]
 
-            # Init metrics
+            #Init metrics
             epoch_meters = TrainingEpochMeters()
             start_data_loading = time.time()
 
@@ -321,9 +306,8 @@ class Trainer(object):
                 (input, target) = data
                 input = input.to(self.device, non_blocking=True)
                 target = target.to(self.device, non_blocking=True)
-                #plt.imshow(input[0].permute(1,2,0),cmap='gray')
-                #plt.show()
-                # for hingeloss only
+                
+                #For hingeloss only
                 if isinstance(self.criterion, SqrHingeLoss):
                     target = target.unsqueeze(1)
                     target_onehot = torch.Tensor(target.size(0), self.num_classes).to(self.device,
@@ -335,22 +319,22 @@ class Trainer(object):
                 else:
                     target_var = target
 
-                # measure data loading time
+                #Measure data loading time
                 epoch_meters.data_time.update(time.time() - start_data_loading)
 
-                # Training batch starts
+                #Training batch starts
                 start_batch = time.time()
                 output = self.model(input)
                 loss = self.criterion(output, target_var)
                 
 
-                # compute gradient and do SGD step
+                #Compute gradient and do SGD step
                 self.optimizer.zero_grad()
                 loss.backward()
                 self.optimizer.step()
 
                 self.model.clip_weights(-1, 1)
-                # measure elapsed time
+                #Measure elapsed time
                 epoch_meters.batch_time.update(time.time() - start_batch)
 
                 if i % int(self.args.log_freq) == 0 or i == len(self.train_loader) - 1:
@@ -361,12 +345,12 @@ class Trainer(object):
                     self.logger.training_batch_cli_log(epoch_meters, epoch, i,
                                                        len(self.train_loader))
 
-                # training batch ends
+                #Training batch ends
                 start_data_loading = time.time()
                 loss_train.append(loss)
                 
 
-            # Set the learning rate
+            #Set the learning rate
             if self.scheduler is not None:
                 self.scheduler.step(epoch)
             else:
@@ -374,48 +358,52 @@ class Trainer(object):
                 if epoch % self.args.stepLR == 0:
                     self.optimizer.param_groups[0]['lr'] *= 0.5
 
-	    # Put the loss in file
+    	    #Put the loss in file
             average_loss=Average(loss_train)
             with open(loss_path, 'a') as f:
              f.write(str(average_loss))
              f.write("\n")
              f.close
              
-            # Perform eval
+            #Perform eval
             with torch.no_grad():
                 top1avg = self.eval_model(epoch)
 
-            # checkpoint
+            #Checkpoint
             if top1avg >= self.best_val_acc and not self.args.dry_run:
                 self.best_val_acc = top1avg
                 self.checkpoint_best(epoch, "best.tar")
             elif not self.args.dry_run:
                 self.checkpoint_best(epoch, "checkpoint.tar")
 
-        # training ends
+        #Training ends
         if not self.args.dry_run:
             return os.path.join(self.checkpoints_dir_path, "best.tar")
 
 
-#Function called during the testing session
+    #Function called during the testing session
     def eval_model(self, epoch=None):
-    	
+        dataset=self.args.dataset
     	#Compute future matrix for results
-        A = [[0,0,0,0,0,0,0,0,0,0],
-            [0,0,0,0,0,0,0,0,0,0],
-            [0,0,0,0,0,0,0,0,0,0],
-            [0,0,0,0,0,0,0,0,0,0],
-            [0,0,0,0,0,0,0,0,0,0],
-            [0,0,0,0,0,0,0,0,0,0],
-            [0,0,0,0,0,0,0,0,0,0],
-            [0,0,0,0,0,0,0,0,0,0],
-            [0,0,0,0,0,0,0,0,0,0],
-            [0,0,0,0,0,0,0,0,0,0]]
+        if dataset=='MNIST_OddEven':
+            A=[[0,0],
+               [0,0]]
+        else:
+            A = [[0,0,0,0,0,0,0,0,0,0],
+                 [0,0,0,0,0,0,0,0,0,0],
+                 [0,0,0,0,0,0,0,0,0,0],
+                 [0,0,0,0,0,0,0,0,0,0],
+                 [0,0,0,0,0,0,0,0,0,0],
+                 [0,0,0,0,0,0,0,0,0,0],
+                 [0,0,0,0,0,0,0,0,0,0],
+                 [0,0,0,0,0,0,0,0,0,0],
+                 [0,0,0,0,0,0,0,0,0,0],
+                 [0,0,0,0,0,0,0,0,0,0]]
         B = []
 
         eval_meters = EvalEpochMeters()
 
-        # switch to evaluate mode
+        #Switch to evaluate mode
         self.model.eval()
         self.criterion.eval()
 
@@ -428,7 +416,7 @@ class Trainer(object):
             target = target.to(self.device, non_blocking=True)
             
 
-            # for hingeloss only
+            #For hingeloss only
             if isinstance(self.criterion, SqrHingeLoss):
                 target = target.unsqueeze(1)
                 target_onehot = torch.Tensor(target.size(0), self.num_classes).to(self.device,
@@ -440,7 +428,7 @@ class Trainer(object):
             else:
                 target_var = target
            
-            # compute output
+            #Compute output
             output = self.model(input)
             
             
@@ -451,11 +439,11 @@ class Trainer(object):
                B.append(part)
               
 
-            # measure model elapsed time
+            #Measure model elapsed time
             eval_meters.model_time.update(time.time() - end)
             end = time.time()
 
-            # compute loss
+            #Compute loss
             loss = self.criterion(output, target_var)
             eval_meters.loss_time.update(time.time() - end)
 
@@ -474,7 +462,7 @@ class Trainer(object):
             eval_meters.top5.update(prec5.item(), input.size(0))
 
 
-            # Eval batch ends
+            #Eval batch ends
             self.logger.eval_batch_cli_log(eval_meters, i, len(self.test_loader))
         if self.args.evaluate:
 
@@ -487,7 +475,7 @@ class Trainer(object):
              f.write(str(self.model))
              f.close
 
-#Write results into txt files
+         #Write results into txt files
          for name, param in self.model.named_parameters():
            with open(test_path, 'a') as f:	#File for weights
              f.write(str(name))
