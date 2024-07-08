@@ -51,4 +51,8 @@ BREVITAS_JIT=1 python3 bnn_pynq_train.py --network GENERAL --experiments exp --g
 ./automation_weights.sh
 ```
 
+# Brevitas
+
+This project has used the work presented in the Brevitas repo (https://github.com/Xilinx/brevitas)
+
 
