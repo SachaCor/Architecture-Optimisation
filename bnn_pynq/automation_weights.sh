@@ -14,15 +14,17 @@ first2=$((64+i))
 last1=$((64-2*i+2))
 last2=$((64-2*i))
 
-#Move neurons
-var1="$first1,$last1,$first1"
-var2="$first2,$last2,$first2"
+#Move neurons (last aims at the layer losing neurons, first aims at the layers recuperating neurons)
+var1="$first1,$first1,$last1,"
+var2="$first2,$first2,$last2"
 
+#Move neurons
 sed -i -e 's/'$var1'/'$var2'/g' $filename
 
 #Train the network with the modified architecture
 BREVITAS_JIT=1 python3 bnn_pynq_train.py --network GENERAL --epochs 500 --experiments exp --gpus None
 
+#Pick the last folder created
 var=`ls exp -t | head -1`
 
 #Test the network with the modified architecture

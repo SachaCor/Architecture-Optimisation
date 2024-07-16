@@ -1,7 +1,7 @@
 # Finite-dimensions Neural networks training
 
 This repo contains a Pytorch implementation for training networks for the paper Architectural Optimisation in Deep Neural Networks. Tests of a theoretically inspired method.
-by Sacha Cormenier, Gianluca Manzan, Paolo Branchini and Pierluigi Contucci.
+By Sacha Cormenier, Gianluca Manzan, Paolo Branchini and Pierluigi Contucci.
 
 ---
 
@@ -38,9 +38,9 @@ Files in each "exp" folder:\
 "table_noisy" summarizes the output predictions vector and final predictions for each of the tested image\
 "test.txt" summarizes the functions used, the architecture, and the values for each weight and bias from the trained network
 
-example of a command for running a training session:\
+Example of a command for running a training session:\
 BREVITAS_JIT=1 python3 bnn_pynq_train.py --network GENERAL --epochs 500 --experiments exp --gpus None\
-you can modify options, following "bnn_pynq_train.py" arguments
+You can modify options, following "bnn_pynq_train.py" arguments
 
 For the testing:\
 BREVITAS_JIT=1 python3 bnn_pynq_train.py --network GENERAL --experiments exp --gpus None --evaluate --resume exp/yourfolder/checkpoints/best.tar
@@ -53,6 +53,6 @@ BREVITAS_JIT=1 python3 bnn_pynq_train.py --network GENERAL --experiments exp --g
 
 # Brevitas
 
-This project has used the work presented in the Brevitas repo (https://github.com/Xilinx/brevitas)
+This project has used the work presented in the Brevitas repo (https://github.com/Xilinx/brevitas).
 
 
