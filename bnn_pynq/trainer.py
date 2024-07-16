@@ -34,8 +34,6 @@ from torch.optim.lr_scheduler import MultiStepLR
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
 from torchvision import transforms
-from torchvision.datasets import MNIST, CIFAR10
-
 from logger import Logger, TrainingEpochMeters, EvalEpochMeters
 from models import model_with_cfg
 from models.losses import SqrHingeLoss
@@ -53,23 +51,6 @@ class AddRandomNoise(object):
         flip_mask = torch.from_numpy(flip_mask)
         noisy_data=(1 - (flip_mask*1)) * nparray + flip_mask * (1 - nparray)
         return noisy_data
-
-class MirrorMNIST(MNIST):
-
-    resources = [
-        ("https://ossci-datasets.s3.amazonaws.com/mnist/train-images-idx3-ubyte.gz",
-         "f68b3c2dcbeaaa9fbdd348bbdeb94873"),
-        ("https://ossci-datasets.s3.amazonaws.com/mnist/train-labels-idx1-ubyte.gz",
-         "d53e105ee54ea40749a09fcbcd1e9432"),
-        ("https://ossci-datasets.s3.amazonaws.com/mnist/t10k-images-idx3-ubyte.gz",
-         "9fb629c4189551a2d022fa330f9573f3"),
-        ("https://ossci-datasets.s3.amazonaws.com/mnist/t10k-labels-idx1-ubyte.gz",
-         "ec29112dd5afa0611ce80d1b7f02629c")
-    ]
-
-    #Required by torchvision <= 0.4.2
-    urls = [l for l, h in resources]
-
 
 def accuracy(output, target, topk=(1,)):
     """Computes the precision@k for the specified values of k"""
@@ -121,8 +102,7 @@ class Trainer(object):
         self.logger = Logger(self.output_dir_path, args.dry_run)
 
         # Datasets
-        NoiseRateT=self.args.noiseT		#Choose the percentage of noise into the testing set
-
+        NoiseRateT=self.args.noiseT		#Choose the percentage of noise
         dataset = cfg.get('MODEL', 'DATASET')
         self.num_classes = cfg.getint('MODEL', 'NUM_CLASSES')
         transform_train = transforms.Compose([transforms.ToTensor(),AddRandomNoise(NoiseRateT)])
@@ -327,7 +307,6 @@ class Trainer(object):
                 output = self.model(input)
                 loss = self.criterion(output, target_var)
                 
-
                 #Compute gradient and do SGD step
                 self.optimizer.zero_grad()
                 loss.backward()
@@ -432,7 +411,6 @@ class Trainer(object):
             output = self.model(input)
             
             
-            
             if self.args.evaluate:
              for x in range(100): 
                part = self.test[x + (i*100)] + " answer " + str(output[x].numpy()) + "     " + str(np.argmax(output[x].numpy()))
@@ -492,9 +470,7 @@ class Trainer(object):
              f.write(str(loss))
              f.write("\n")
              f.close
-
-
-         with open(table_path, 'w') as f:	#File for the output vectors (predictions)
+         with open(table_path, 'w') as f:	#File for the output vectors
            for line in B:
              f.write(line)
              f.write('\n')
