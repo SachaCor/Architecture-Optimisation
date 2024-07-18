@@ -1,0 +1,1 @@
+This repo is for stocking all the folders containing the training parameters of the networks.

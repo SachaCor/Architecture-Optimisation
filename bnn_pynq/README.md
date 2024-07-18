@@ -28,7 +28,7 @@ In "automation_weights.sh" is the code for performing a study of different archi
 Folders:\
 "cfg" contains the .ini file with the architecture wanted\
 "exp" contains the folders where are gathered all the informations for each training and testing sessions. They are sorted by date and time of starting computation\
-"images" contain the different datasets "Fashion", "MNIST" and "MNIST_OddEven". The datasets must be unzipped\
+"images" contain the different datasets "Fashion", "MNIST" and "MNIST_OddEven". The datasets must be extracted\
 "models" has python functions for the use of the code
 
 Files in each "exp" folder:\
